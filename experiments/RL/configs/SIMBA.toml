@@ -1,0 +1,10 @@
+# Standar hyperparameters
+hidden_dim = 128
+n_hidden_blocks = 4
+lr = 1e-4
+
+# Ablation hyperparameters
+#_InvBottleNeck = [0]
+#_Rsnorm = true
+#_Lnorm = true
+#_ResidualConexion = true

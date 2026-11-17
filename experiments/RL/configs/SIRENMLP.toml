@@ -1,0 +1,5 @@
+mlp_layers = 1
+siren_layers = 2
+hidden_dim = 64
+residual_conexion = true
+layer_norm = true

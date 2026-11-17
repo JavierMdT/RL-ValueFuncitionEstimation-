@@ -1,0 +1,8 @@
+lr = 0.0001
+mlp_layers = 6
+hidden_dim = 256
+sigma = 10
+input_dim = 2
+output_dim = 1
+environment = 'Pendulum-v1'
+elapsed_time = 20.920313804992475

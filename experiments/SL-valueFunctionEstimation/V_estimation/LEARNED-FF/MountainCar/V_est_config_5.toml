@@ -1,0 +1,8 @@
+lr = 0.0001
+mlp_layers = 2
+hidden_dim = 256
+sigma = 10
+input_dim = 2
+output_dim = 1
+environment = 'MountainCar-v0'
+elapsed_time = 66.80784889799543

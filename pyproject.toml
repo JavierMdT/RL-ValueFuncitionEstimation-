@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rlvaluefunctionestimation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ipykernel>=7.2.0",
+    "ipywidgets>=8.1.8",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "gymnasium>=1.2.3",
+    "matplotlib>=3.10.8",
+    "tqdm>=4.67.3",
+    "multiprocess>=0.70.19",
+    "pandas>=3.0.5",
+    "pyarrow>=25.0.0",
+    "scienceplots>=2.2.2",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
+torchaudio = { index = "pytorch-cu130" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[dependency-groups]
+dev = [
+    "rlvaluefunctionestimation", 
+]

@@ -1,0 +1,5 @@
+hidden_dim = 128
+n_hidden_blocks = 3
+omega_0 = 30
+C = 3
+lr = 1e-4

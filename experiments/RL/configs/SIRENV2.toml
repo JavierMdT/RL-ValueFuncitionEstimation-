@@ -1,0 +1,7 @@
+hidden_dim = [128]
+n_hidden_layers = [3]
+omega_0 = 30
+lr = [1e-4]  
+_Lnorm = [true, false]
+_ResidualConexion = [true, false]
+_FirstLNorm = [true, false]

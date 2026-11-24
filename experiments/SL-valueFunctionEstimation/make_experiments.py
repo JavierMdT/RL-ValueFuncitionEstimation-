@@ -28,12 +28,14 @@ from src.models.simba import Simba, Simba_ablation
 from src.models.simbav2 import Simbav2
 from src.models.siren import Siren, SirenV2, SirenSimba, SirenSimbaV2
 from src.models.f_decomposition import F_decomposition
-from src.models.learned_ff import Lff
+from src.models.learned_ff import Lff, Clff
 
 # Utils funcs
 from src.utils import model_hyperparameters, show_dict, make_exp_supervised, get_data
 
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+# Manual device selection: "cpu", "cuda", "cuda:0", etc.
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+device = torch.device(DEVICE)
 
 # V ground truth path
 ROOT = Path("./V_truth")
@@ -50,13 +52,14 @@ RESULTS_DIR = os.path.join(CURRENT_DIR, "results")
 
 models_dict = {
     # Baseline
-    "MLP": Mlp,
+    #"MLP": Mlp,
 
     # INRs
     #"SIREN": Siren,
 
     # Learned fourier features
     "Learned-FF": Lff,
+    #"C-Learned-FF": Clff,
 }
 
 # Environments definition
@@ -66,7 +69,7 @@ envs_dict = {
 }
 
 for model_name, model_class in models_dict.items():
-    print(f"||||||| Training (Supervised) with {model_name} |||||||", flush=True)
+    print(f"||||||| Training (Supervised) with {model_name} on {device} |||||||", flush=True)
 
     for env_key, env_id in envs_dict.items():
         print(f"\n--- Environment: {env_key} ({env_id}) ---", flush=True)
@@ -89,9 +92,12 @@ for model_name, model_class in models_dict.items():
         # Get the DataFrame containing states and V*
         df_data = get_data(env_key, env)
 
-        # Separate inputs (X) and target (Y) as PyTorch tensors based on the environment
-        X = torch.tensor(df_data.iloc[:, :-1].values, dtype=torch.float32)
-        Y_ground_truth = torch.tensor(df_data.iloc[:, -1].values, dtype=torch.float32)
+        # Separate inputs (X) and target (Y) as PyTorch tensors on the selected device
+        X = torch.tensor(df_data.iloc[:, :-1].values, dtype=torch.float32, device=device)
+        Y_ground_truth = torch.tensor(df_data.iloc[:, -1].values, dtype=torch.float32, device=device)
+
+        exp_params = inspect.signature(make_exp_supervised).parameters
+        device_kwarg = {"device": device} if "device" in exp_params else {}
 
         for i, values in enumerate(combinations):
             current_config = dict(zip(keys, values))
@@ -111,8 +117,9 @@ for model_name, model_class in models_dict.items():
                 X=X,
                 Y=Y_ground_truth,
                 lr=lr,
-                batch_size=32,
+                batch_size=64,
                 #batch_size=BATCH_SIZE,
+                **device_kwarg,
                 **filtered_config
             )
 
@@ -131,7 +138,7 @@ for model_name, model_class in models_dict.items():
             save_name = f"{model_name}_{env_key}_config_{i}_{timestamp}"
 
             table = pa.Table.from_pandas(df_loss)
-            full_config = {"lr": lr, **current_config, "environment": env_id, "elapsed_time": elapsed_time}
+            full_config = {"lr": lr, **current_config, "environment": env_id, "device": str(device), "elapsed_time": elapsed_time}
             metadata = {b"hyperparameters": json.dumps(full_config).encode("utf-8")}
             table = table.replace_schema_metadata({**(table.schema.metadata or {}), **metadata})
             pq.write_table(table, os.path.join(output_dir, f"{save_name}.parquet"))
@@ -149,6 +156,7 @@ for model_name, model_class in models_dict.items():
                 "lr": lr,
                 **current_config,
                 "environment": env_id,
+                "device": str(device),
                 "elapsed_time": elapsed_time
             }
 

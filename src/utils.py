@@ -51,35 +51,49 @@ def get_data(env_key, env, root_dir=Path("./V_truth")):
         
     return df
 
-def make_exp_supervised(model_class, X, Y, lr, batch_size=32, epochs=500, seed=42, **model_args) -> tuple:
+def make_exp_supervised(
+    model_class,
+    X,
+    Y,
+    lr,
+    batch_size=32,
+    epochs=500,
+    seed=42,
+    device="cpu",
+    **model_args,
+) -> tuple:
     """
     Performs a single supervised training run without parallelization.
     """
+    target_device = torch.device(device)
+
     # Set seeds for reproducibility
     torch.manual_seed(seed)
+    if target_device.type == "cuda":
+        torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
-    
-    torch.set_num_threads(2)
-    
+
+    if not torch.cuda.is_available(): torch.set_num_threads(2)
+
     # Instantiate model and print total parameters
-    policy_net = model_class(**model_args).to("cpu")
+    policy_net = model_class(**model_args).to(target_device)
     total_params = sum(p.numel() for p in policy_net.parameters())
-    print(f"Nº parameters: {total_params:,}")    
-    
+    print(f"Nº parameters: {total_params:,}")
+
     optimizer = torch.optim.AdamW(params=policy_net.parameters(), lr=lr, amsgrad=True)
-    
+
     # Train the model using the flexible train_supervised function
     loss, V_estimation = train_supervised(
-        device="cpu",
+        device=target_device,
         model=policy_net,
         X=X,
         Y=Y,
         optimizer=optimizer,
         batch_size=batch_size,
-        epochs=epochs
+        epochs=epochs,
     )
-    
+
     return (loss, V_estimation)
 
 def make_exps_parallel(model, env, num_episodes, memory_capacity, lr, batch_size, num_runs=100, **model_args):

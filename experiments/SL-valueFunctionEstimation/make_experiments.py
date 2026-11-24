@@ -6,7 +6,6 @@
 
 # Imports base
 import os
-import sys
 import time
 import json
 import inspect
@@ -23,7 +22,7 @@ from pathlib import Path
 from datetime import datetime
 warnings.filterwarnings("ignore")
 
-# Baselines 
+# Baselines
 from src.models.mlp import Mlp
 from src.models.simba import Simba, Simba_ablation
 from src.models.simbav2 import Simbav2
@@ -33,7 +32,6 @@ from src.models.learned_ff import Lff
 
 # Utils funcs
 from src.utils import model_hyperparameters, show_dict, make_exp_supervised, get_data
-import src.utils as utils
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -47,18 +45,16 @@ with open(TOML_PATH, "rb") as f:
 
 BATCH_SIZE = config.get("BATCH_SIZE", 64)
 
-# Results and logs directories
+# Results directory
 RESULTS_DIR = os.path.join(CURRENT_DIR, "results")
-LOGS_DIR = os.path.join(RESULTS_DIR, ".logs")
-os.makedirs(LOGS_DIR, exist_ok=True)
 
 models_dict = {
     # Baseline
     "MLP": Mlp,
-    
+
     # INRs
     #"SIREN": Siren,
-    
+
     # Learned fourier features
     "Learned-FF": Lff,
 }
@@ -70,110 +66,98 @@ envs_dict = {
 }
 
 for model_name, model_class in models_dict.items():
-    log_path = os.path.join(LOGS_DIR, f"{model_name.lower()}.log")
-    
-    with open(log_path, "w") as log_file:
-        orig_out, orig_err = utils.redirect_all_to_log(log_path)
-        
-        print(f"||||||| Training (Supervised) with {model_name} |||||||")
-        
-        for env_key, env_id in envs_dict.items():
-            print(f"\n--- Environment: {env_key} ({env_id}) ---")
-            
-            env = gym.make(env_id)
-            state, info = env.reset()
-            input_dim = 2 
-            output_dim = 1 
-            
-            # Model hyperparameters setup...
-            model_config = model_hyperparameters(name=model_name,
-                                                input_dim=input_dim,
-                                                output_dim=output_dim,
-                                                CURRENT_DIR=CURRENT_DIR)
-            
-            normalized_config = {k: v if isinstance(v, list) else [v] for k, v in model_config.items()}
-            keys = list(normalized_config.keys())
-            combinations = list(itertools.product(*normalized_config.values()))
-            
-            # Get the DataFrame containing states and V*
-            df_data = get_data(env_key, env)
-            
-            # Separate inputs (X) and target (Y) as PyTorch tensors based on the environment
-            X = torch.tensor(df_data.iloc[:, :-1].values, dtype=torch.float32)
-            Y_ground_truth = torch.tensor(df_data.iloc[:, -1].values, dtype=torch.float32)
-                            
-            for i, values in enumerate(combinations):
-                current_config = dict(zip(keys, values))
-                print(f"{'-'*10} Model hyperparameters ({env_key}) {'-'*10}")
-                show_dict(current_config)
-                print("-"*43)
-                
-                lr = current_config.pop("lr")
-                valid_keys = inspect.signature(model_class.__init__).parameters.keys()
-                filtered_config = {k: v for k, v in current_config.items() if k in valid_keys}
-                
-                start_t = time.perf_counter()
-                
-                # Run single supervised training run
-                loss, V_estimation = make_exp_supervised(
-                    model_class=model_class, # Ojo: Asegúrate de pasar model_class (sin el "=" suelto si estaba mal)
-                    X=X,
-                    Y=Y_ground_truth, 
-                    lr=lr,
-                    batch_size=None,
-                    #batch_size=BATCH_SIZE,
-                    **filtered_config
-                )
-                
-                elapsed_time = time.perf_counter() - start_t
-                print(f"Elapsed time: {elapsed_time}")
-                
-                # Como ahora es una sola ejecución, guardamos la loss directamente como una serie/fila
-                df_loss = pd.DataFrame({
-                    "loss": loss
-                }).T
-                
-                timestamp = datetime.now().strftime("%Y-%m-%d")
-                
-                # Save loss
-                output_dir = os.path.join(RESULTS_DIR, model_name.upper(), env_key)
-                os.makedirs(output_dir, exist_ok=True)
-                save_name = f"{model_name}_{env_key}_config_{i}_{timestamp}"
-                
-                table = pa.Table.from_pandas(df_loss)
-                full_config = {"lr": lr, **current_config, "environment": env_id, "elapsed_time": elapsed_time}
-                metadata = {b"hyperparameters": json.dumps(full_config).encode("utf-8")}
-                table = table.replace_schema_metadata({**(table.schema.metadata or {}), **metadata})
-                pq.write_table(table, os.path.join(output_dir, f"{save_name}.parquet"))
+    print(f"||||||| Training (Supervised) with {model_name} |||||||", flush=True)
 
-                # Save V-estimation and its configuration TOML (overwriting if it already exists)
-                estimation_dir = os.path.join(CURRENT_DIR, "V_estimation", model_name.upper(), env_key)
-                os.makedirs(estimation_dir, exist_ok=True)
+    for env_key, env_id in envs_dict.items():
+        print(f"\n--- Environment: {env_key} ({env_id}) ---", flush=True)
 
-                base_filename = f"V_est_config_{i}"
+        env = gym.make(env_id)
+        state, info = env.reset()
+        input_dim = 2
+        output_dim = 1
 
-                # 1. Guardar el array numpy
-                v_est_np = V_estimation.detach().cpu().numpy()
-                np.save(os.path.join(estimation_dir, f"{base_filename}.npy"), v_est_np)
+        # Model hyperparameters setup...
+        model_config = model_hyperparameters(name=model_name,
+                                            input_dim=input_dim,
+                                            output_dim=output_dim,
+                                            CURRENT_DIR=CURRENT_DIR)
 
-                # 2. Guardar la configuración en un archivo .toml al lado
-                full_config_to_save = {
-                    "lr": lr,
-                    **current_config,
-                    "environment": env_id,
-                    "elapsed_time": elapsed_time
-                }
+        normalized_config = {k: v if isinstance(v, list) else [v] for k, v in model_config.items()}
+        keys = list(normalized_config.keys())
+        combinations = list(itertools.product(*normalized_config.values()))
 
-                toml_path = os.path.join(estimation_dir, f"{base_filename}.toml")
-                with open(toml_path, "w", encoding="utf-8") as f:
-                    for k, v in full_config_to_save.items():
-                        f.write(f"{k} = {repr(v)}\n")
-                
-                        
-                # End
-                print(f"Model {model_name} on {env_key} (Config {i}) successfully trained and V_estimation saved!\n")
-            
-            env.close()
+        # Get the DataFrame containing states and V*
+        df_data = get_data(env_key, env)
 
-# Restore standard output
-utils.restore_all_descriptors(orig_out, orig_err)
+        # Separate inputs (X) and target (Y) as PyTorch tensors based on the environment
+        X = torch.tensor(df_data.iloc[:, :-1].values, dtype=torch.float32)
+        Y_ground_truth = torch.tensor(df_data.iloc[:, -1].values, dtype=torch.float32)
+
+        for i, values in enumerate(combinations):
+            current_config = dict(zip(keys, values))
+            print(f"{'-'*10} Model hyperparameters ({env_key}) {'-'*10}", flush=True)
+            show_dict(current_config)
+            print("-"*43, flush=True)
+
+            lr = current_config.pop("lr")
+            valid_keys = inspect.signature(model_class.__init__).parameters.keys()
+            filtered_config = {k: v for k, v in current_config.items() if k in valid_keys}
+
+            start_t = time.perf_counter()
+
+            # Run single supervised training run
+            loss, V_estimation = make_exp_supervised(
+                model_class=model_class,
+                X=X,
+                Y=Y_ground_truth,
+                lr=lr,
+                batch_size=32,
+                #batch_size=BATCH_SIZE,
+                **filtered_config
+            )
+
+            elapsed_time = time.perf_counter() - start_t
+            print(f"Elapsed time: {elapsed_time}", flush=True)
+
+            df_loss = pd.DataFrame({
+                "loss": loss
+            }).T
+
+            timestamp = datetime.now().strftime("%Y-%m-%d")
+
+            # Save loss
+            output_dir = os.path.join(RESULTS_DIR, model_name.upper(), env_key)
+            os.makedirs(output_dir, exist_ok=True)
+            save_name = f"{model_name}_{env_key}_config_{i}_{timestamp}"
+
+            table = pa.Table.from_pandas(df_loss)
+            full_config = {"lr": lr, **current_config, "environment": env_id, "elapsed_time": elapsed_time}
+            metadata = {b"hyperparameters": json.dumps(full_config).encode("utf-8")}
+            table = table.replace_schema_metadata({**(table.schema.metadata or {}), **metadata})
+            pq.write_table(table, os.path.join(output_dir, f"{save_name}.parquet"))
+
+            # Save V-estimation and its configuration TOML (overwriting if it already exists)
+            estimation_dir = os.path.join(CURRENT_DIR, "V_estimation", model_name.upper(), env_key)
+            os.makedirs(estimation_dir, exist_ok=True)
+
+            base_filename = f"V_est_config_{i}"
+
+            v_est_np = V_estimation.detach().cpu().numpy()
+            np.save(os.path.join(estimation_dir, f"{base_filename}.npy"), v_est_np)
+
+            full_config_to_save = {
+                "lr": lr,
+                **current_config,
+                "environment": env_id,
+                "elapsed_time": elapsed_time
+            }
+
+            toml_path = os.path.join(estimation_dir, f"{base_filename}.toml")
+            with open(toml_path, "w", encoding="utf-8") as f:
+                for k, v in full_config_to_save.items():
+                    f.write(f"{k} = {repr(v)}\n")
+
+            # End
+            print(f"Model {model_name} on {env_key} (Config {i}) successfully trained and V_estimation saved!\n", flush=True)
+
+        env.close()

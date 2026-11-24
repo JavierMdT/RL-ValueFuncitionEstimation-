@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 
-def train_supervised(device, model, X, Y, optimizer, batch_size=None, epochs=50):
+def train_supervised(device, model, X, Y, optimizer, batch_size=32, epochs=50):
     """
     Performs supervised training. Uses mini-batches if batch_size is an integer,
     or full-batch training if batch_size is None.

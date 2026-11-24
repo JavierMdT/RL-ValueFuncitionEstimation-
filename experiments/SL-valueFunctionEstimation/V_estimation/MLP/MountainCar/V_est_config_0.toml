@@ -4,4 +4,4 @@ n_hidden_layers = 2
 input_dim = 2
 output_dim = 1
 environment = 'MountainCar-v0'
-elapsed_time = 17.552036667009816
+elapsed_time = 1413.3311202160548

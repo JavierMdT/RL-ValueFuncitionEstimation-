@@ -5,4 +5,4 @@ sigma = 0.1
 input_dim = 2
 output_dim = 1
 environment = 'MountainCar-v0'
-elapsed_time = 346.6258278309833
+elapsed_time = 11409.409767891979

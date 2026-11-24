@@ -51,7 +51,7 @@ def get_data(env_key, env, root_dir=Path("./V_truth")):
         
     return df
 
-def make_exp_supervised(model_class, X, Y, lr, batch_size=None, epochs=500, seed=42, **model_args) -> tuple:
+def make_exp_supervised(model_class, X, Y, lr, batch_size=32, epochs=500, seed=42, **model_args) -> tuple:
     """
     Performs a single supervised training run without parallelization.
     """
@@ -274,27 +274,6 @@ def get_cardinalities(action_space: gym.Space) -> tuple[list[int], list[int]]:
         raise NotImplementedError(f"Space not supported or continuous: {type(action_space)}")
         
     return cardinalities #type:ignore
-
-def redirect_all_to_log(log_path):
-    # Forzar vaciado de buffers de Python
-    sys.stdout.flush()
-    sys.stderr.flush()
-    
-    # Abrir el fichero de log a nivel de descriptor de archivo del SO
-    log_fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
-    
-    # Guardar los descriptores originales para poder restaurarlos después si hace falta
-    orig_stdout_fd = os.dup(1)
-    orig_stderr_fd = os.dup(2)
-    
-    # Redirigir stdout (1) y stderr (2) del sistema operativo al archivo de log
-    os.dup2(log_fd, 1)
-    os.dup2(log_fd, 2)
-    
-    os.close(log_fd)
-    return orig_stdout_fd, orig_stderr_fd
-
-def restore_all_descriptors(orig_stdout_fd, orig_stderr_fd):
     sys.stdout.flush()
     sys.stderr.flush()
     

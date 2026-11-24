@@ -8,6 +8,8 @@ results
 *.parquet
 *.csv
 *.log
+V_estimation
+V_truth
 
 # C extensions
 *.so

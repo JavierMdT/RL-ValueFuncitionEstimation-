@@ -10,6 +10,7 @@ results
 *.log
 V_estimation
 V_truth
+figures.ipynb
 
 # C extensions
 *.so

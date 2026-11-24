@@ -1,7 +1,0 @@
-lr = 0.0001
-hidden_dim = 128
-n_hidden_layers = 4
-input_dim = 2
-output_dim = 1
-environment = 'Pendulum-v1'
-elapsed_time = 380.0236600659555
